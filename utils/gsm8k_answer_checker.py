@@ -62,7 +62,6 @@ class gsm8k_answer_checker:
     def _remove_think_tags(answer):
         return re.sub(r'<think>.*?</think>', '', answer)
 
-    # todo: be careful with the conversion that might lead to runtime errors
     @staticmethod
     def _extract_answer(text):
         """
@@ -73,21 +72,30 @@ class gsm8k_answer_checker:
         2. Content after #### (ground truth)
         3. Last number in the text
         """
+        def clean_number(num_str):
+            # Remove any non-numeric characters except '.' and '-'
+            cleaned = re.sub(r'[^\d.-]', '', num_str)
+            try:
+                return float(cleaned)
+            except ValueError:
+                return None
+
         # Match content inside \boxed{}
-        boxed_match = re.search(r'\\boxed{([\d]+(?:\.\d+)?)\D*}', text)
+        boxed_match = re.search(r'\\boxed{([\d.,]+(?:\.\d+)?)\D*}', text)
         if boxed_match:
-            return float(boxed_match.group(1))  # Return content inside braces
+            return clean_number(boxed_match.group(1))
         
-        # Match content after ####, assumes answer ends afterwards
+        # Match content after ####
         hash_match = re.search(r'####\s*(.*)', text)
         if hash_match:
-            return float(hash_match.group(1).strip())  # Return content after ####
+            return clean_number(hash_match.group(1).strip())
         
-        # Match the last number in the text
-        number_match = re.findall(r'\d+', text)
-        if number_match:
-            return float(number_match[-1]) # Return the last number matched
-        
+        # Match all numbers, including decimals and commas
+        number_matches = re.findall(r'[\d.,]+(?:\.\d+)?', text)
+        if number_matches:
+            # Take the last number, clean it, and convert to float
+            return clean_number(number_matches[-1])
+
         return None  # Return None if no matches found
 
 
