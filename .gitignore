@@ -3,3 +3,4 @@ output/
 .venv/
 .vscode/
 __pycache__/
+papers/
