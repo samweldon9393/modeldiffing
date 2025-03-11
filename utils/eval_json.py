@@ -1,6 +1,8 @@
 import json
 import argparse
 
+# summary statistics for a json file
+
 def eval_json(path):
     with open(path, 'r') as f:
         data = json.load(f)
