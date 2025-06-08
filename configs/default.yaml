@@ -1,0 +1,9 @@
+data:
+  name: "openai/gsm8k"
+model:
+  name: "meta-llama/Llama-3.2-1B-Instruct"
+
+training:
+  learning_rate: 0.001
+  epochs:        50
+  optimizer:     "adam"
