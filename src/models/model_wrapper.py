@@ -7,7 +7,7 @@ class ModelWrapper:
         # Load config
         with open(config_path, "r") as f:
             cfg = yaml.safe_load(f)
-        self.name = cfg.get("model_name") or cfg.get("model", {}).get("name")
+        self.name = cfg.get("model", {}).get("name")
         if not self.name:
             raise ValueError("no model_name in config")
 
@@ -29,7 +29,7 @@ class ModelWrapper:
         # figure out device for inputs
         self.device = next(self.model.parameters()).device
 
-    def generate(self, prompts: list[str]) -> list[str]:
+    def generate(self, prompts: list[str], max_new_tokens: int = 64, do_sample: bool = True, temperature: float = 0.17, top_k: int = 50, top_p: float = 0.9, num_return_sequences: int = 1) -> list[str]:
         # batch-tokenize (now using a real pad token)
         inputs = self.tokenizer(
             prompts,
@@ -45,12 +45,12 @@ class ModelWrapper:
         with torch.no_grad():
             out_ids = self.model.generate(
                 **inputs,
-                max_new_tokens=64,
-                do_sample=True,
-                temperature=0.8,
-                top_k=50,
-                top_p=0.9,
-                num_return_sequences=1,
+                max_new_tokens=max_new_tokens,
+                do_sample=do_sample,
+                temperature=temperature,
+                top_k=top_k,
+                top_p=top_p,
+                num_return_sequences=num_return_sequences,
                 pad_token_id=self.tokenizer.pad_token_id,  # now a distinct pad
             )
 
@@ -58,11 +58,12 @@ class ModelWrapper:
 
 
 if __name__ == "__main__":
+
     m = ModelWrapper("/workspace/modeldiffing/configs/default.yaml")
 
     prompts = [
-        "You are a helpful assistant… Hi, how are you?",
-        "You are a helpful assistant… How old are you?"
+        "4 + 3 = ",
+        "9 + 1 = "
     ]
     for i, r in enumerate(m.generate(prompts), 1):
         print(f"— Response #{i} —\n{r}\n")
