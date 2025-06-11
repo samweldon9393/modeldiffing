@@ -13,6 +13,9 @@ class AnswerChecker:
         for i, prediction in enumerate(predictions):
             rewards.append( self.check(prediction, ground_truths[i]) )
 
+        with open("rewards_log.json", "w") as f:
+            json.dump(rewards, f, indent=4)
+
         return rewards
 
     #single prediction & ground truth for now 
