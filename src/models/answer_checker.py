@@ -19,11 +19,22 @@ class AnswerChecker:
             ans = response_match[4] 
         else:
             ans = self.first_number(prediction)
+            if ans == None:
+                print("Failed to parse any number in prediction")
+                return None
 
         truth_match = self.truth_format(ground_truth)
-        print(truth_match[1])
-        if int(ans) == int(truth_match[1]):
-            info["answer_correct"] = 1
+        if truth_match == None:
+            print("Failed to parse truth")
+            return None
+
+        try:
+            if int(ans) == int(truth_match[1]):
+                info["answer_correct"] = 1
+        except(ValueError, TypeError):
+            print("Failed to parse")
+            return None
+            # ask Paul what we want to do here
 
         info["reward"] = (info["format_correct"] + info["answer_correct"]) / 2
         return info
@@ -42,13 +53,13 @@ class AnswerChecker:
     def first_number(self, prediction):
         #match[0] = first number in string
         match = re.search(r"\d+", prediction)
-        return match[0]
+        return match
 
 ac = AnswerChecker()
 
 #response = "<think>1 plus 1 might equal 2</think> \\boxed{2} adasd"
-response = "hello friend 2 sasdfaf"
-ground_truth = " ... ###2  asdfasdf"
+response = "hello 1 friend  sasdfaf"
+ground_truth = " ... ###  asdfasdf"
 
 info = ac.check(response, ground_truth)
 
