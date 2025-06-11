@@ -18,10 +18,11 @@ class AnswerChecker:
             info["format_correct"] = 1
             ans = response_match[4] 
         else:
-            ans = self.first_number(prediction)
-            if ans == None:
+            match = self.first_number(prediction)
+            if match == None:
                 print("Failed to parse any number in prediction")
                 return None
+            ans = match[0]
 
         truth_match = self.truth_format(ground_truth)
         if truth_match == None:
@@ -58,8 +59,8 @@ class AnswerChecker:
 ac = AnswerChecker()
 
 #response = "<think>1 plus 1 might equal 2</think> \\boxed{2} adasd"
-response = "hello 1 friend  sasdfaf"
-ground_truth = " ... ###  asdfasdf"
+response = "hello 2 friend  sasdfaf"
+ground_truth = " ... ### 2"
 
 info = ac.check(response, ground_truth)
 
