@@ -18,7 +18,7 @@ class AnswerChecker:
 
         return rewards
 
-    #single prediction & ground truth for now 
+    #single prediction & ground truth 
     def check(self, prediction: str, ground_truth: str) -> dict:
         info = {
             "format_correct" : 0,
@@ -27,28 +27,28 @@ class AnswerChecker:
         }
 
         response_match = self.response_format(prediction)
-        ans = "x" #cannot match truth
+        ans = "x" # cannot match truth
         if response_match != None:
             info["format_correct"] = 1
             ans = response_match[4] 
         else:
             match = self.first_number(prediction)
             if match == None:
-                print("Failed to parse any number in prediction")
-                return None
+                # TODO log parse fail
+                return info # 0 reward for no match
             ans = match[0]
 
         truth_match = self.truth_format(ground_truth)
         if truth_match == None:
-            print("Failed to parse truth")
-            return None
+            # TODO log parse fail
+            return info # ground truth parse failure
 
         try:
             if int(ans) == int(truth_match[1]):
                 info["answer_correct"] = 1
         except(ValueError, TypeError):
-            print("Failed to parse")
-            return None
+            # TODO log parse fail
+            return info # integer parse error
             # ask Paul what we want to do here
 
         info["reward"] = (info["format_correct"] + info["answer_correct"]) / 2
@@ -77,4 +77,6 @@ ground_truths = [" ... ### 2", "this is the answer ### 2"]
 
 info = ac.check_batched(responses, ground_truths)
 
+
 print(info)
+
