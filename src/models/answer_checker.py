@@ -1,5 +1,11 @@
 import re
 import json
+from concurrent.futures import ThreadPoolExecutor
+#from concurrent.futures import ProcessPoolExecutor
+
+import cProfile
+import pstats
+
 
 class AnswerChecker:
     def __init__(self):
@@ -10,8 +16,20 @@ class AnswerChecker:
             raise Exception("Must have same quantity of predictions and ground truths")
 
         rewards = []
+
+        '''
+        #sequential
         for i, prediction in enumerate(predictions):
             rewards.append( self.check(prediction, ground_truths[i]) )
+        '''
+        # threads
+        with ThreadPoolExecutor() as executor:
+            rewards = list(executor.map(self.check, predictions, ground_truths))
+        '''
+        # processes
+        with ProcessPoolExecutor() as executor:
+            rewards = list(executor.map(self.check, predictions, ground_truths))
+        '''
 
         with open("rewards_log.json", "w") as f:
             json.dump(rewards, f, indent=4)
@@ -65,18 +83,31 @@ class AnswerChecker:
         match = re.search("###\\s*(\\d+)", ground_truth)
         return match
 
+    # TODO this will pull a number from inside the think tags, is that what we want?
     def first_number(self, prediction: str):
         #match[0] = first number in string
         match = re.search(r"\d+", prediction)
         return match
 
-ac = AnswerChecker()
 
-responses = ["hello 2 friend  sasdfaf", "<think>1 plus 1 might equal 2</think> \\boxed{2} adasd"]
-ground_truths = [" ... ### 2", "this is the answer ### 2"]
+def test():
 
-info = ac.check_batched(responses, ground_truths)
+    with open("responses.txt", "r") as f:
+        content = f.read()
+    predictions = content.strip().split("\n\n")
+    with open("ground_truths.txt", "r") as f:
+        content = f.read()
+    truths = content.strip().split("\n\n")
 
+    ac = AnswerChecker()
+    #rewards = ac.check_batched(predictions, truths)
+    rewards = [ac.check(p, gt) for p, gt in zip(predictions, truths)]
 
-print(info)
+profiler = cProfile.Profile()
+profiler.enable()
 
+test()
+
+profiler.disable()
+stats = pstats.Stats(profiler).sort_stats('cumulative')
+stats.print_stats(20)
