@@ -9,7 +9,14 @@ import pstats
 
 class AnswerChecker:
     def __init__(self):
-        pass
+        #match[0] = whole string, match[2] = inside think tags, match[4] = final answer
+        self.response_pattern = re.compile("(.*)<think>(.*?)</think>(.*?)\\\\boxed{(.*)}")
+        #match[1] = final answer
+        self.truth_pattern = re.compile("###\\s*(\\d+)")
+        #match[0] = first number in string
+        # TODO this will pull a number from inside the think tags, is that what we want?
+        self.first_number_pattern = re.compile("\\d+")
+
 
     def check_batched(self, predictions: list[str], ground_truths: list[str]) -> list[dict]:
         if len(predictions) != len(ground_truths):
@@ -44,19 +51,19 @@ class AnswerChecker:
             "reward" : 0
         }
 
-        response_match = self.response_format(prediction)
+        response_match = self.response_pattern.search(prediction)
         ans = "x" # cannot match truth
         if response_match != None:
             info["format_correct"] = 1
             ans = response_match[4] 
         else:
-            match = self.first_number(prediction)
+            match = self.first_number_pattern.search(prediction)
             if match == None:
                 # TODO log parse fail
                 return info # 0 reward for no match
             ans = match[0]
 
-        truth_match = self.truth_format(ground_truth)
+        truth_match = self.truth_pattern.search(ground_truth)
         if truth_match == None:
             # TODO log parse fail
             return info # ground truth parse failure
@@ -71,23 +78,6 @@ class AnswerChecker:
 
         info["reward"] = (info["format_correct"] + info["answer_correct"]) / 2
         return info
-
-
-    def response_format(self, prediction: str):
-        #match[0] = whole string, match[2] = inside think tags, match[4] = final answer
-        match = re.search("(.*)<think>(.*?)</think>(.*?)\\\\boxed{(.*)}", prediction)
-        return match
-    
-    def truth_format(self, ground_truth: str):
-        #match[1] = final answer
-        match = re.search("###\\s*(\\d+)", ground_truth)
-        return match
-
-    # TODO this will pull a number from inside the think tags, is that what we want?
-    def first_number(self, prediction: str):
-        #match[0] = first number in string
-        match = re.search(r"\d+", prediction)
-        return match
 
 
 def test():
