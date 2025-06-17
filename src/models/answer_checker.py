@@ -1,15 +1,34 @@
+#CHANGES MADE: implemented logging and improved error handling 
+#1. added logging import and basic logging setup in __init__
+#2. replaced all TODO comments with logging calls:
+#   - logger.warning() for parsing failures and conversion errors
+#   - logger.error() for ground truth parsing failures 
+#3. fixed regex pattern in response_format():
+#   - added re.DOTALL flag to handle newlines in <think> tages (chat gpt helped w this)
+#   - fixed blackslash escaping: \\boxed instead of \\\\boxed 
+#   - escaped braces: \{ and \} for proper matching 
+#   - made pattern non-greedy: (.*?) instead of (.*) 
+#4. added debug print statements to track problems  
+#5. fixed file location issue and confirm JSON saves correctl
+
 import re
 import json
 from concurrent.futures import ThreadPoolExecutor
 #from concurrent.futures import ProcessPoolExecutor
+#helps run multiple tasks at once 
 
-import cProfile
-import pstats
+import cProfile #to measure how fast the code runs 
+import pstats 
+import logging #print messages to screen and files 
 
 
 class AnswerChecker:
     def __init__(self):
-        pass
+        #set up basic logging once when object is created 
+        logging.basicConfig(level=logging.INFO) #showing INFO level or more important levels
+        #get logger for the file (used chat for this, maybe we wanna double check)
+        self.logger = logging.getLogger(__name__)
+        #__name__ contains name of current file 
 
     def check_batched(self, predictions: list[str], ground_truths: list[str]) -> list[dict]:
         if len(predictions) != len(ground_truths):
@@ -31,6 +50,7 @@ class AnswerChecker:
             rewards = list(executor.map(self.check, predictions, ground_truths))
         '''
 
+        print(f"About to save {len(rewards)} rewards to file")
         with open("rewards_log.json", "w") as f:
             json.dump(rewards, f, indent=4)
 
@@ -38,6 +58,7 @@ class AnswerChecker:
 
     #single prediction & ground truth 
     def check(self, prediction: str, ground_truth: str) -> dict:
+        print(f"Checking prediction: {prediction[:50]}...")
         info = {
             "format_correct" : 0,
             "answer_correct" : 0,
@@ -52,20 +73,20 @@ class AnswerChecker:
         else:
             match = self.first_number(prediction)
             if match == None:
-                # TODO log parse fail
+                self.logger.warning("No number found in prediction")
                 return info # 0 reward for no match
             ans = match[0]
 
         truth_match = self.truth_format(ground_truth)
         if truth_match == None:
-            # TODO log parse fail
+            self.logger.error("Could not parse ground truth")
             return info # ground truth parse failure
 
         try:
             if int(ans) == int(truth_match[1]):
                 info["answer_correct"] = 1
         except(ValueError, TypeError):
-            # TODO log parse fail
+            self.logger.warning("Could not convert answer to integer")
             return info # integer parse error
             # ask Paul what we want to do here
 
@@ -75,7 +96,7 @@ class AnswerChecker:
 
     def response_format(self, prediction: str):
         #match[0] = whole string, match[2] = inside think tags, match[4] = final answer
-        match = re.search("(.*)<think>(.*?)</think>(.*?)\\\\boxed{(.*)}", prediction)
+        match = re.search(r"(.*)<think>(.*?)</think>(.*?)\\boxed\{(.*)\}", prediction, re.DOTALL)
         return match
     
     def truth_format(self, ground_truth: str):
@@ -100,8 +121,7 @@ def test():
     truths = content.strip().split("\n\n")
 
     ac = AnswerChecker()
-    #rewards = ac.check_batched(predictions, truths)
-    rewards = [ac.check(p, gt) for p, gt in zip(predictions, truths)]
+    rewards = ac.check_batched(predictions, truths)
 
 profiler = cProfile.Profile()
 profiler.enable()
